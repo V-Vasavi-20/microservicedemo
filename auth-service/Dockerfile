@@ -31,7 +31,7 @@ COPY auth-service/src auth-service/src
 RUN mvn clean package -pl auth-service -am -DskipTests
 
 # Runtime stage
-FROM eclipse-temurin:17.0.13_11-jre-alpine
+FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
 
 # Run as non-root user
