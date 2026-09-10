@@ -45,6 +45,8 @@ spec:
                 secretKeyRef:
                   name: crm-db-secret
                   key: DB_PASSWORD
+            - name: SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE
+              value: "2"
 {{- end }}
 
 {{- if eq $service.name "gateway-service" }}
