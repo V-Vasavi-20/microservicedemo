@@ -118,7 +118,7 @@ pipeline {
 
                                     sh """
                                         aws eks update-kubeconfig --name ${EKS_CLUSTER} --region ${AWS_REGION}
-                                        helm upgrade --install ${service} helm/microservices \\
+                                        helm upgrade --install ${service} helm/crm \\
                                             -n ${namespace} \\
                                             --set name=${service} \\
                                             --set namespace=${namespace} \\
