@@ -73,7 +73,7 @@ spec:
               path: /actuator/health
               port: http
               scheme: HTTP
-            initialDelaySeconds: 60
+            initialDelaySeconds: 120
             periodSeconds: 20
             timeoutSeconds: 5
             failureThreshold: 3
