@@ -62,7 +62,6 @@ pipeline {
             }
         }
 
-        stage('Detect Changed Services') {
 
         stage('Build, Scan, and Deploy Each Changed Service') {
             when {
