@@ -120,15 +120,18 @@ pipeline {
                                 script {
                                     def namespace = service.replace('-service', '')
 
+                                    // Updates only this one service's image tag within the
+                                    // single, shared crm-platform release, rather than
+                                    // creating a separate release per service - since this
+                                    // chart's resources (like gateway-config) are shared
+                                    // across all services and conflict if managed by
+                                    // multiple, separate releases.
                                     sh """
                                         aws eks update-kubeconfig --name ${EKS_CLUSTER} --region ${AWS_REGION}
-                                        helm upgrade --install ${service} helm/crm \\
-                                            -n ${namespace} \\
-                                            --set global.imageRegistry=${ECR_REGISTRY} \\
+                                        helm upgrade crm-platform helm/crm \\
+                                            --reuse-values \\
                                             --set services.${namespace}.image=vasavi-infra-dev-${service} \\
-                                            --set services.${namespace}.tag=${IMAGE_TAG} \\
-                                            --set database.host=vasavi-infra-dev-db.chcaic6o2yq1.ap-south-1.rds.amazonaws.com \\
-                                            --set database.name=tenantcrm
+                                            --set services.${namespace}.tag=${IMAGE_TAG}
                                     """
                                 }
                             }
