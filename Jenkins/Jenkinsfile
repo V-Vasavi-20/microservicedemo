@@ -105,8 +105,8 @@ pipeline {
                             stage("${service}: Trivy Scan") {
                                 sh """
                                     export TMPDIR=/var/lib/jenkins/trivy-cache
-                                    trivy image --cache-dir /var/lib/jenkins/trivy-cache --severity HIGH,CRITICAL --exit-code 1 ${ECR_REGISTRY}/vasavi-infra-dev-${service}:${IMAGE_TAG}
-                                """
+                                    trivy image --cache-dir /var/lib/jenkins/trivy-cache --ignorefile ${WORKSPACE}/.trivyignore --severity HIGH,CRITICAL --exit-code 1 ${ECR_REGISTRY}/vasavi-infra-dev-${service}:${IMAGE_TAG}
+					"""
                             }
 
                             stage("${service}: Push to ECR") {

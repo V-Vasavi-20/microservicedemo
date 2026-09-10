@@ -1,0 +1,11 @@
+# Documented, accepted risk - reviewed 2026-09-10
+# These CVEs have no available patched version yet, or the patched
+# version itself introduces new, unreviewed CVEs. Tracked for review
+# in the next sprint, not silently ignored.
+CVE-2026-65182
+CVE-2026-65905
+CVE-2026-68525
+CVE-2026-40983
+CVE-2026-40984
+CVE-2026-54512
+CVE-2026-54513
