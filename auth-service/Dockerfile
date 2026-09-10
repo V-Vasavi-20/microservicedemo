@@ -1,5 +1,5 @@
 # Build stage
-FROM maven:3.9.6-eclipse-temurin-17 AS builder
+FROM maven:3.9.9-eclipse-temurin-17 AS builder
 WORKDIR /app
 
 # Copy root pom and module poms for full reactor resolution
@@ -31,7 +31,7 @@ COPY auth-service/src auth-service/src
 RUN mvn clean package -pl auth-service -am -DskipTests
 
 # Runtime stage
-FROM eclipse-temurin:17-jre-alpine
+FROM eclipse-temurin:17.0.13_11-jre-alpine
 WORKDIR /app
 
 # Run as non-root user
