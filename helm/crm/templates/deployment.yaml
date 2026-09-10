@@ -9,6 +9,8 @@ metadata:
 spec:
   replicas: {{ $service.replicas }}
   revisionHistoryLimit: 3
+  :strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: {{ $service.name }}
