@@ -54,8 +54,9 @@ pipeline {
             }
         }
 
-        stage('Build Common Library') {
+       stage('Build Parent POM and Common Library') {
             steps {
+                sh 'mvn -N install'
                 dir('common-library') {
                     sh 'mvn clean install -DskipTests'
                 }
