@@ -116,23 +116,19 @@ pipeline {
                                 """
                             }
 
-                            stage("${service}: Helm Deploy") {
+                             stage("${service}: Helm Deploy") {
                                 script {
                                     def namespace = service.replace('-service', '')
-                                    def port = [
-                                        'auth-service': 8081, 'gateway-service': 8080, 'user-service': 8082,
-                                        'admin-service': 8094, 'employee-service': 8095, 'customer-service': 8084,
-                                        'hr-service': 8096, 'task-service': 8089
-                                    ][service]
 
                                     sh """
                                         aws eks update-kubeconfig --name ${EKS_CLUSTER} --region ${AWS_REGION}
                                         helm upgrade --install ${service} helm/crm \\
                                             -n ${namespace} \\
-                                            --set name=${service} \\
-                                            --set namespace=${namespace} \\
-                                            --set port=${port} \\
-                                            --set image=${ECR_REGISTRY}/vasavi-infra-dev-${service}:${IMAGE_TAG}
+                                            --set global.imageRegistry=${ECR_REGISTRY} \\
+                                            --set services.${namespace}.image=vasavi-infra-dev-${service} \\
+                                            --set services.${namespace}.tag=${IMAGE_TAG} \\
+                                            --set database.host=vasavi-infra-dev-db.chcaic6o2yq1.ap-south-1.rds.amazonaws.com \\
+                                            --set database.name=tenantcrm
                                     """
                                 }
                             }
@@ -149,10 +145,10 @@ pipeline {
                             stage("${service}: Smoke Test") {
                                 script {
                                     def namespace = service.replace('-service', '')
-                                    def port = [
+                                                                        def port = [
                                         'auth-service': 8081, 'gateway-service': 8080, 'user-service': 8082,
-                                        'admin-service': 8094, 'employee-service': 8095, 'customer-service': 8084,
-                                        'hr-service': 8096, 'task-service': 8089
+                                        'admin-service': 8082, 'employee-service': 8083, 'customer-service': 8084,
+                                        'hr-service': 8085, 'task-service': 8089
                                     ][service]
 
                                     sh """
