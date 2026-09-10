@@ -96,12 +96,10 @@ pipeline {
                                 }
                             }
 
-                            stage("${service}: Docker Build") {
-                                dir(service) {
-                                    sh """
-                                        docker build -t ${ECR_REGISTRY}/vasavi-infra-dev-${service}:${IMAGE_TAG} .
-                                    """
-                                }
+                             stage("${service}: Docker Build") {
+                                sh """
+                                    docker build -f ${service}/Dockerfile -t ${ECR_REGISTRY}/vasavi-infra-dev-${service}:${IMAGE_TAG} .
+                                """
                             }
 
                             stage("${service}: Trivy Scan") {
