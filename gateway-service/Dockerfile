@@ -31,6 +31,7 @@ RUN mvn clean package -pl gateway-service -am -DskipTests
 
 # Runtime stage
 FROM eclipse-temurin:17-jre-alpine
+RUN apk update && apk upgrade --no-cache
 WORKDIR /app
 
 # Run as non-root user
