@@ -138,9 +138,10 @@ pipeline {
                                     // creating a separate release per service - since this
                                     // chart's resources (like gateway-config) are shared
                                     // across all services and conflict if managed by
-                                    // multiple, separate releases.
-                                    sh """
-                                        aws eks update-kubeconfig --name ${EKS_CLUSTER} --region ${AWS_REGION}
+                                    // multiple, separate releases
+                               sh """
+                                        export KUBECONFIG=/tmp/kubeconfig-${service}
+                                        aws eks update-kubeconfig --name ${EKS_CLUSTER} --region ${AWS_REGION} --kubeconfig /tmp/kubeconfig-${service}
                                         helm upgrade crm-platform helm/crm \\
                                             --reuse-values \\
                                             --set services.${namespace}.image=vasavi-infra-dev-${service} \\
@@ -152,7 +153,9 @@ pipeline {
                             stage("${service}: Wait for Rollout") {
                                 script {
                                     def namespace = service.replace('-service', '')
+                                     
                                     sh """
+                                        export KUBECONFIG=/tmp/kubeconfig-${service}
                                         kubectl rollout status deployment/${service} -n ${namespace} --timeout=180s
                                     """
                                 }
@@ -167,7 +170,8 @@ pipeline {
                                         'hr-service': 8085, 'task-service': 8089
                                     ][service]
 
-                                    sh """
+                                     sh """
+                                        export KUBECONFIG=/tmp/kubeconfig-${service}
                                         kubectl run smoke-test-${service}-${BUILD_NUMBER} --rm -i --restart=Never \\
                                             --image=curlimages/curl \\
                                             -- curl -sf http://${service}.${namespace}.svc.cluster.local:${port}/actuator/health
