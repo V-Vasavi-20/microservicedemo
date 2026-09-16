@@ -54,7 +54,7 @@ pipeline {
             }
         }
 
-       stage('Build Parent POM and Common Library') {
+              stage('Build Parent POM and Common Library') {
             steps {
                 sh 'mvn -N install'
                 dir('common-library') {
@@ -63,6 +63,16 @@ pipeline {
             }
         }
 
+        stage('Pre-download Trivy Databases') {
+            steps {
+                sh '''
+                    export TMPDIR=/var/lib/jenkins/trivy-cache-shared
+                    mkdir -p /var/lib/jenkins/trivy-cache-shared
+                    trivy image --cache-dir /var/lib/jenkins/trivy-cache-shared --download-db-only
+                    trivy image --cache-dir /var/lib/jenkins/trivy-cache-shared --download-java-db-only
+                '''
+            }
+        }
 
         stage('Build, Scan, and Deploy Each Changed Service') {
             when {
@@ -104,8 +114,8 @@ pipeline {
 
                             stage("${service}: Trivy Scan") {
                                 sh """
-                                    export TMPDIR=/var/lib/jenkins/trivy-cache-${service}
-                                    trivy image --cache-dir /var/lib/jenkins/trivy-cache-${service} --ignorefile ${WORKSPACE}/.trivyignore --severity HIGH,CRITICAL --exit-code 1 ${ECR_REGISTRY}/vasavi-infra-dev-${service}:${IMAGE_TAG}                                                                             	"""
+                                    export TMPDIR=/var/lib/jenkins/trivy-cache-shared
+                                    trivy image --cache-dir /var/lib/jenkins/trivy-cache-shared --ignorefile ${WORKSPACE}/.trivyignore --skip-db-update --skip-java-db-update --severity HIGH,CRITICAL --exit-code 1 ${ECR_REGISTRY}/vasavi-infra-dev-${service}:${IMAGE_TAG}                                                                             	"""
                             }
 
                             stage("${service}: Push to ECR") {
