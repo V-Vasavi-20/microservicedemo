@@ -139,14 +139,17 @@ pipeline {
                                     // chart's resources (like gateway-config) are shared
                                     // across all services and conflict if managed by
                                     // multiple, separate releases
-                               sh """
+                             retry(5) {
+                                    sh """
                                         export KUBECONFIG=/tmp/kubeconfig-${service}
                                         aws eks update-kubeconfig --name ${EKS_CLUSTER} --region ${AWS_REGION} --kubeconfig /tmp/kubeconfig-${service}
+                                        sleep \$((RANDOM % 15))
                                         helm upgrade crm-platform helm/crm \\
                                             --reuse-values \\
                                             --set services.${namespace}.image=vasavi-infra-dev-${service} \\
                                             --set services.${namespace}.tag=${IMAGE_TAG}
                                     """
+                                   }
                                 }
                             }
 
