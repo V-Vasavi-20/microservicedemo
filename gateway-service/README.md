@@ -10,3 +10,4 @@
 # Helm retry fix test - Wed Sep 16 17:26:04 UTC 2026
 # Trivy retry widen test - Thu Sep 17 12:15:49 UTC 2026
 # Rollout timeout fix test - Thu Sep 17 12:33:25 UTC 2026
+# Smoke test buffer fix test - Thu Sep 17 14:37:55 UTC 2026
