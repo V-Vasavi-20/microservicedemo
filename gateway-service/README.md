@@ -8,3 +8,4 @@
 # Retry fix test - Wed Sep 16 13:09:47 UTC 2026
 # Kubeconfig race fix test - Wed Sep 16 17:09:06 UTC 2026
 # Helm retry fix test - Wed Sep 16 17:26:04 UTC 2026
+# Trivy retry widen test - Thu Sep 17 12:15:49 UTC 2026
