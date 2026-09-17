@@ -10,6 +10,7 @@ pipeline {
     environment {
         AWS_REGION     = 'ap-south-1'
         ECR_REGISTRY   = '872792314712.dkr.ecr.ap-south-1.amazonaws.com'
+        NEXUS_REGISTRY = 'vasavi-infra-dev-alb-1910676003.ap-south-1.elb.amazonaws.com'
         EKS_CLUSTER    = 'vasavi-infra-dev-eks'
         IMAGE_TAG      = "${GIT_COMMIT[0..7]}"
     }
@@ -127,6 +128,16 @@ pipeline {
                                     aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}
                                     docker push ${ECR_REGISTRY}/vasavi-infra-dev-${service}:${IMAGE_TAG}
                                 """
+                            }
+
+                            stage("${service}: Push to Nexus") {
+                                withCredentials([usernamePassword(credentialsId: 'nexus-credentials', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
+                                    sh """
+                                        docker login ${NEXUS_REGISTRY} -u \$NEXUS_USER -p \$NEXUS_PASS
+                                        docker tag ${ECR_REGISTRY}/vasavi-infra-dev-${service}:${IMAGE_TAG} ${NEXUS_REGISTRY}/microservices-docker/vasavi-infra-dev-${service}:${IMAGE_TAG}
+                                        docker push ${NEXUS_REGISTRY}/microservices-docker/vasavi-infra-dev-${service}:${IMAGE_TAG}
+                                    """
+                                }
                             }
 
                              stage("${service}: Helm Deploy") {
