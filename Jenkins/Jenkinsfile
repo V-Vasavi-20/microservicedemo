@@ -159,7 +159,7 @@ pipeline {
                                      
                                     sh """
                                         export KUBECONFIG=/tmp/kubeconfig-${service}
-                                        kubectl rollout status deployment/${service} -n ${namespace} --timeout=180s
+                                        kubectl rollout status deployment/${service} -n ${namespace} --timeout=300s
                                     """
                                 }
                             }
