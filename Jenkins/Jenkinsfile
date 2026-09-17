@@ -175,6 +175,7 @@ pipeline {
 
                                      sh """
                                         export KUBECONFIG=/tmp/kubeconfig-${service}
+                                        sleep 10
                                         kubectl run smoke-test-${service}-${BUILD_NUMBER} --rm -i --restart=Never \\
                                             --image=curlimages/curl \\
                                             -- curl -sf http://${service}.${namespace}.svc.cluster.local:${port}/actuator/health
