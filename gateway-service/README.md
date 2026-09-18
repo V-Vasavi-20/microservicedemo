@@ -17,3 +17,4 @@
 # Anonymous access disabled test - Fri Sep 18 04:25:15 UTC 2026
 # Full docker sequence lock test - Fri Sep 18 09:52:21 UTC 2026
 # Refreshed credentials test - Fri Sep 18 10:33:42 UTC 2026
+# Debug credential test - Fri Sep 18 11:06:03 UTC 2026
