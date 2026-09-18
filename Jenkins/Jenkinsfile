@@ -10,7 +10,7 @@ pipeline {
     environment {
         AWS_REGION     = 'ap-south-1'
         ECR_REGISTRY   = '872792314712.dkr.ecr.ap-south-1.amazonaws.com'
-        NEXUS_REGISTRY = 'vasavi-infra-dev-alb-1910676003.ap-south-1.elb.amazonaws.com'
+        NEXUS_REGISTRY = '10.1.11.18:8081'
         EKS_CLUSTER    = 'vasavi-infra-dev-eks'
         IMAGE_TAG      = "${GIT_COMMIT[0..7]}"
     }
@@ -135,8 +135,7 @@ pipeline {
                                     retry(3) {
                                         withCredentials([usernamePassword(credentialsId: 'nexus-credentials', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
                                             sh """
-                                                echo "DEBUG: user=[\$NEXUS_USER] passlen=\${#NEXUS_PASS}"
-                                                docker login ${NEXUS_REGISTRY} -u \$NEXUS_USER -p \$NEXUS_PASS
+                                                                                                                                              docker login ${NEXUS_REGISTRY} -u \$NEXUS_USER -p \$NEXUS_PASS
 
                                                 docker tag ${ECR_REGISTRY}/vasavi-infra-dev-${service}:${IMAGE_TAG} ${NEXUS_REGISTRY}/microservices-docker/vasavi-infra-dev-${service}:${IMAGE_TAG}
                                                 docker push ${NEXUS_REGISTRY}/microservices-docker/vasavi-infra-dev-${service}:${IMAGE_TAG}
