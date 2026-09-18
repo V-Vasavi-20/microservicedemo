@@ -18,3 +18,4 @@
 # Full docker sequence lock test - Fri Sep 18 09:52:21 UTC 2026
 # Refreshed credentials test - Fri Sep 18 10:33:42 UTC 2026
 # Debug credential test - Fri Sep 18 11:06:03 UTC 2026
+# Direct Nexus IP fix test - Fri Sep 18 11:29:45 UTC 2026
