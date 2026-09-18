@@ -107,31 +107,31 @@ pipeline {
                                 }
                             }
 
-                             stage("${service}: Docker Build") {
-                                sh """
-                                    docker build -f ${service}/Dockerfile -t ${ECR_REGISTRY}/vasavi-infra-dev-${service}:${IMAGE_TAG} .
-                                """
-                            }
-
-                              stage("${service}: Trivy Scan") {
-                                retry(6) {
+                             lock('docker-daemon-lock') {
+                                stage("${service}: Docker Build") {
                                     sh """
-                                        export TMPDIR=/var/lib/jenkins/trivy-cache-shared
-                                        sleep \$((RANDOM % 30))
-                                        trivy image --cache-dir /var/lib/jenkins/trivy-cache-shared --ignorefile ${WORKSPACE}/.trivyignore --skip-db-update --skip-java-db-update --severity HIGH,CRITICAL --exit-code 1 ${ECR_REGISTRY}/vasavi-infra-dev-${service}:${IMAGE_TAG}
+                                        docker build -f ${service}/Dockerfile -t ${ECR_REGISTRY}/vasavi-infra-dev-${service}:${IMAGE_TAG} .
                                     """
                                 }
-                            }
 
-                            stage("${service}: Push to ECR") {
-                                sh """
-                                    aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}
-                                    docker push ${ECR_REGISTRY}/vasavi-infra-dev-${service}:${IMAGE_TAG}
-                                """
-                            }
+                                stage("${service}: Trivy Scan") {
+                                    retry(6) {
+                                        sh """
+                                            export TMPDIR=/var/lib/jenkins/trivy-cache-shared
+                                            sleep \$((RANDOM % 30))
+                                            trivy image --cache-dir /var/lib/jenkins/trivy-cache-shared --ignorefile ${WORKSPACE}/.trivyignore --skip-db-update --skip-java-db-update --severity HIGH,CRITICAL --exit-code 1 ${ECR_REGISTRY}/vasavi-infra-dev-${service}:${IMAGE_TAG}
+                                        """
+                                    }
+                                }
 
-                              stage("${service}: Push to Nexus") {
-                                lock('nexus-push-lock') {
+                                stage("${service}: Push to ECR") {
+                                    sh """
+                                        aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}
+                                        docker push ${ECR_REGISTRY}/vasavi-infra-dev-${service}:${IMAGE_TAG}
+                                    """
+                                }
+
+                                stage("${service}: Push to Nexus") {
                                     retry(3) {
                                         withCredentials([usernamePassword(credentialsId: 'nexus-credentials', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
                                             sh """
@@ -143,6 +143,7 @@ pipeline {
                                     }
                                 }
                             }
+      
 
                              stage("${service}: Helm Deploy") {
                                 script {
