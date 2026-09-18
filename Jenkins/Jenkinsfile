@@ -131,11 +131,13 @@ pipeline {
                                     """
                                 }
 
-                                stage("${service}: Push to Nexus") {
+                                  stage("${service}: Push to Nexus") {
                                     retry(3) {
                                         withCredentials([usernamePassword(credentialsId: 'nexus-credentials', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
                                             sh """
+                                                echo "DEBUG: user=[\$NEXUS_USER] passlen=\${#NEXUS_PASS}"
                                                 docker login ${NEXUS_REGISTRY} -u \$NEXUS_USER -p \$NEXUS_PASS
+
                                                 docker tag ${ECR_REGISTRY}/vasavi-infra-dev-${service}:${IMAGE_TAG} ${NEXUS_REGISTRY}/microservices-docker/vasavi-infra-dev-${service}:${IMAGE_TAG}
                                                 docker push ${NEXUS_REGISTRY}/microservices-docker/vasavi-infra-dev-${service}:${IMAGE_TAG}
                                             """
