@@ -12,3 +12,4 @@
 # Nexus lock fix test - Thu Sep 17 21:16:05 UTC 2026
 # Anonymous access disabled test - Fri Sep 18 04:25:15 UTC 2026
 # Full docker sequence lock test - Fri Sep 18 09:52:21 UTC 2026
+# Refreshed credentials test - Fri Sep 18 10:33:42 UTC 2026
