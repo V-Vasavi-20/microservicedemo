@@ -10,7 +10,7 @@ pipeline {
     environment {
         AWS_REGION     = 'ap-south-1'
         ECR_REGISTRY   = '872792314712.dkr.ecr.ap-south-1.amazonaws.com'
-        NEXUS_REGISTRY = '10.1.11.18:8081'
+        NEXUS_REGISTRY = '10.1.11.235:8081'
         EKS_CLUSTER    = 'vasavi-infra-dev-eks'
         IMAGE_TAG      = "${GIT_COMMIT[0..7]}"
     }
