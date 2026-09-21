@@ -156,7 +156,7 @@ pipeline {
                                     sh """
                                         export KUBECONFIG=/tmp/kubeconfig-${service}
                                         aws eks update-kubeconfig --name ${EKS_CLUSTER} --region ${AWS_REGION} --kubeconfig /tmp/kubeconfig-${service}
-                                        sleep \$((RANDOM % 15))
+                                        sleep \$((RANDOM % 25 + 15))
                                         helm upgrade crm-platform helm/crm \\
                                             --reuse-values \\
                                             --set services.${namespace}.image=vasavi-infra-dev-${service} \\
