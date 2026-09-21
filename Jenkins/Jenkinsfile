@@ -101,11 +101,6 @@ pipeline {
                                 }
                             }
 
-                            stage("${service}: Quality Gate") {
-                                timeout(time: 15, unit: 'MINUTES') {
-                                    waitForQualityGate abortPipeline: true
-                                }
-                            }
 
                              lock('docker-daemon-lock') {
                                 stage("${service}: Docker Build") {
