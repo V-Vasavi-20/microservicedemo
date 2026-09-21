@@ -11,3 +11,4 @@ Part of the CRM microservices platform. See the root repository README for build
 # Nexus rate limit fix final test - Mon Sep 21 16:12:15 UTC 2026
 # Fresh Nexus instance final test - Mon Sep 21 16:53:34 UTC 2026
 # EKS access and CVE fix final test - Mon Sep 21 17:14:17 UTC 2026
+# Helm bootstrap and registry fix final test - Mon Sep 21 21:21:14 UTC 2026
