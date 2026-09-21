@@ -5,3 +5,4 @@ Part of the CRM microservices platform. See the root repository README for build
 # Nexus rate limit + webhook fix test - Mon Sep 21 08:12:07 UTC 2026
 # Quality gate timeout fix test - Mon Sep 21 08:25:28 UTC 2026
 # Fresh SonarQube instance test - Mon Sep 21 10:33:20 UTC 2026
+# Jenkins anonymous read fix test - Mon Sep 21 11:30:06 UTC 2026
