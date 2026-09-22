@@ -22,6 +22,20 @@ pipeline {
     }
 
     stages {
+        
+        stage('Verify Prerequisites') {
+            steps {
+                sh '''
+                    echo "Verifying required tools are installed..."
+                    docker --version
+                    trivy --version
+                    kubectl version --client
+                    helm version --short
+                    aws --version
+                    echo "All required tools verified."
+                '''
+            }
+        }
 
         stage('Checkout') {
             steps {
