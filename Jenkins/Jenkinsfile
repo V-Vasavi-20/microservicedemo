@@ -2,6 +2,14 @@ pipeline {
 
     agent any
 
+    parameters {
+        booleanParam(
+            name: 'INITIAL_BUILD',
+            defaultValue: false,
+            description: 'Build and push all microservice images for the initial deployment'
+        )
+    }
+
     tools {
         jdk 'jdk21'
         maven 'maven-3.9'
@@ -33,15 +41,15 @@ pipeline {
                     aws --version
                     echo "All required tools verified."
                 '''
-                    script {
+                script {
                     def nexusIp = sh(
                         script: "aws ec2 describe-instances --filters 'Name=tag:Name,Values=vasavi-infra-dev-nexus-instance' 'Name=instance-state-name,Values=running' --query 'Reservations[0].Instances[0].PrivateIpAddress' --output text --region ap-south-1",
                         returnStdout: true
                     ).trim()
                     env.NEXUS_REGISTRY = "${nexusIp}:8081"
                     echo "Resolved NEXUS_REGISTRY: ${env.NEXUS_REGISTRY}"
+                    env.FAILED_SERVICES = ''
                 }
-
             }
         }
 
@@ -63,9 +71,13 @@ pipeline {
                         returnStdout: true
                     ).trim().split('\n')
 
-                    env.CHANGED_SERVICES = allServices.findAll { service ->
-                        changedFiles.any { it.startsWith(service + '/') }
-                    }.join(',')
+                    if (params.INITIAL_BUILD) {
+                        env.CHANGED_SERVICES = allServices.join(',')
+                    } else {
+                        env.CHANGED_SERVICES = allServices.findAll { service ->
+                            changedFiles.any { it.startsWith(service + '/') }
+                        }.join(',')
+                    }
 
                     if (env.CHANGED_SERVICES == '') {
                         echo 'No microservice changes detected. Skipping build.'
@@ -104,8 +116,13 @@ pipeline {
             steps {
                 script {
                     env.CHANGED_SERVICES.split(',').each { service ->
-                        dir(service) {
-                            sh 'mvn clean compile'
+                        try {
+                            dir(service) {
+                                sh 'mvn clean compile'
+                            }
+                        } catch (e) {
+                            echo "Build failed for ${service}: ${e.message}. Continuing with remaining services."
+                            env.FAILED_SERVICES = (env.FAILED_SERVICES + ',' + service).trim(',')
                         }
                     }
                 }
@@ -117,8 +134,17 @@ pipeline {
             steps {
                 script {
                     env.CHANGED_SERVICES.split(',').each { service ->
-                        dir(service) {
-                            sh 'mvn test'
+                        if (!env.FAILED_SERVICES.split(',').contains(service)) {
+                            try {
+                                dir(service) {
+                                    sh 'mvn test'
+                                }
+                            } catch (e) {
+                                echo "Test failed for ${service}: ${e.message}. Continuing with remaining services."
+                                env.FAILED_SERVICES = (env.FAILED_SERVICES + ',' + service).trim(',')
+                            }
+                        } else {
+                            echo "Skipping Test for ${service} (already failed earlier stage)"
                         }
                     }
                 }
@@ -130,10 +156,19 @@ pipeline {
             steps {
                 script {
                     env.CHANGED_SERVICES.split(',').each { service ->
-                        dir(service) {
-                            withSonarQubeEnv('SonarQube') {
-                                sh 'mvn org.sonarsource.scanner.maven:sonar-maven-plugin:3.11.0.3922:sonar'
+                        if (!env.FAILED_SERVICES.split(',').contains(service)) {
+                            try {
+                                dir(service) {
+                                    withSonarQubeEnv('SonarQube') {
+                                        sh 'mvn org.sonarsource.scanner.maven:sonar-maven-plugin:3.11.0.3922:sonar'
+                                    }
+                                }
+                            } catch (e) {
+                                echo "SonarQube Analysis failed for ${service}: ${e.message}. Continuing with remaining services."
+                                env.FAILED_SERVICES = (env.FAILED_SERVICES + ',' + service).trim(',')
                             }
+                        } else {
+                            echo "Skipping SonarQube Analysis for ${service} (already failed earlier stage)"
                         }
                     }
                 }
@@ -145,7 +180,16 @@ pipeline {
             steps {
                 script {
                     env.CHANGED_SERVICES.split(',').each { service ->
-                        sh "docker build -f ${service}/Dockerfile -t ${ECR_REGISTRY}/vasavi-infra-dev-${service}:${IMAGE_TAG} ."
+                        if (!env.FAILED_SERVICES.split(',').contains(service)) {
+                            try {
+                                sh "docker build -f ${service}/Dockerfile -t ${ECR_REGISTRY}/vasavi-infra-dev-${service}:${IMAGE_TAG} ."
+                            } catch (e) {
+                                echo "Docker Build failed for ${service}: ${e.message}. Continuing with remaining services."
+                                env.FAILED_SERVICES = (env.FAILED_SERVICES + ',' + service).trim(',')
+                            }
+                        } else {
+                            echo "Skipping Docker Build for ${service} (already failed earlier stage)"
+                        }
                     }
                 }
             }
@@ -156,12 +200,21 @@ pipeline {
             steps {
                 script {
                     env.CHANGED_SERVICES.split(',').each { service ->
-                        retry(6) {
-                            sh """
-                                export TMPDIR=/var/lib/jenkins/trivy-cache-shared
-                                sleep \$((RANDOM % 30))
-                                trivy image --cache-dir /var/lib/jenkins/trivy-cache-shared --ignorefile ${WORKSPACE}/.trivyignore --skip-db-update --skip-java-db-update --severity HIGH,CRITICAL --exit-code 1 ${ECR_REGISTRY}/vasavi-infra-dev-${service}:${IMAGE_TAG}
-                            """
+                        if (!env.FAILED_SERVICES.split(',').contains(service)) {
+                            try {
+                                retry(6) {
+                                    sh """
+                                        export TMPDIR=/var/lib/jenkins/trivy-cache-shared
+                                        sleep \$((RANDOM % 30))
+                                        trivy image --cache-dir /var/lib/jenkins/trivy-cache-shared --ignorefile ${WORKSPACE}/.trivyignore --skip-db-update --skip-java-db-update --severity HIGH,CRITICAL --exit-code 1 ${ECR_REGISTRY}/vasavi-infra-dev-${service}:${IMAGE_TAG}
+                                    """
+                                }
+                            } catch (e) {
+                                echo "Trivy Scan failed for ${service}: ${e.message}. Continuing with remaining services."
+                                env.FAILED_SERVICES = (env.FAILED_SERVICES + ',' + service).trim(',')
+                            }
+                        } else {
+                            echo "Skipping Trivy Scan for ${service} (already failed earlier stage)"
                         }
                     }
                 }
@@ -173,19 +226,28 @@ pipeline {
             steps {
                 script {
                     env.CHANGED_SERVICES.split(',').each { service ->
-                        sh """
-                            aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}
-                            docker push ${ECR_REGISTRY}/vasavi-infra-dev-${service}:${IMAGE_TAG}
-                        """
-                        retry(3) {
-                            withCredentials([usernamePassword(credentialsId: 'nexus-credentials', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
+                        if (!env.FAILED_SERVICES.split(',').contains(service)) {
+                            try {
                                 sh """
-                                    sleep \$((RANDOM % 25 + 15))
-                                    docker login ${NEXUS_REGISTRY} -u \$NEXUS_USER -p \$NEXUS_PASS
-                                    docker tag ${ECR_REGISTRY}/vasavi-infra-dev-${service}:${IMAGE_TAG} ${NEXUS_REGISTRY}/microservices-docker/vasavi-infra-dev-${service}:${IMAGE_TAG}
-                                    docker push ${NEXUS_REGISTRY}/microservices-docker/vasavi-infra-dev-${service}:${IMAGE_TAG}
+                                    aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}
+                                    docker push ${ECR_REGISTRY}/vasavi-infra-dev-${service}:${IMAGE_TAG}
                                 """
+                                retry(3) {
+                                    withCredentials([usernamePassword(credentialsId: 'nexus-credentials', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
+                                        sh """
+                                            sleep \$((RANDOM % 25 + 15))
+                                            docker login ${NEXUS_REGISTRY} -u \$NEXUS_USER -p \$NEXUS_PASS
+                                            docker tag ${ECR_REGISTRY}/vasavi-infra-dev-${service}:${IMAGE_TAG} ${NEXUS_REGISTRY}/microservices-docker/vasavi-infra-dev-${service}:${IMAGE_TAG}
+                                            docker push ${NEXUS_REGISTRY}/microservices-docker/vasavi-infra-dev-${service}:${IMAGE_TAG}
+                                        """
+                                    }
+                                }
+                            } catch (e) {
+                                echo "Push Images failed for ${service}: ${e.message}. Continuing with remaining services."
+                                env.FAILED_SERVICES = (env.FAILED_SERVICES + ',' + service).trim(',')
                             }
+                        } else {
+                            echo "Skipping Push Images for ${service} (already failed earlier stage)"
                         }
                     }
                 }
@@ -204,15 +266,24 @@ pipeline {
             steps {
                 script {
                     env.CHANGED_SERVICES.split(',').each { service ->
-                        def namespace = service.replace('-service', '')
-                        retry(5) {
-                            sh """
-                                export KUBECONFIG=/tmp/kubeconfig-pipeline-${BUILD_NUMBER}
-                                sleep \$((RANDOM % 15))
-                                helm upgrade crm-platform helm/crm --reuse-values \\
-                                    --set services.${namespace}.image=vasavi-infra-dev-${service} \\
-                                    --set services.${namespace}.tag=${IMAGE_TAG}
-                            """
+                        if (!env.FAILED_SERVICES.split(',').contains(service)) {
+                            def namespace = service.replace('-service', '')
+                            try {
+                                retry(5) {
+                                    sh """
+                                        export KUBECONFIG=/tmp/kubeconfig-pipeline-${BUILD_NUMBER}
+                                        sleep \$((RANDOM % 15))
+                                        helm upgrade crm-platform helm/crm --reuse-values \\
+                                            --set services.${namespace}.image=vasavi-infra-dev-${service} \\
+                                            --set services.${namespace}.tag=${IMAGE_TAG}
+                                    """
+                                }
+                            } catch (e) {
+                                echo "Helm Deploy failed for ${service}: ${e.message}. Continuing with remaining services."
+                                env.FAILED_SERVICES = (env.FAILED_SERVICES + ',' + service).trim(',')
+                            }
+                        } else {
+                            echo "Skipping Helm Deploy for ${service} (already failed earlier stage)"
                         }
                     }
                 }
@@ -224,11 +295,20 @@ pipeline {
             steps {
                 script {
                     env.CHANGED_SERVICES.split(',').each { service ->
-                        def namespace = service.replace('-service', '')
-                        sh """
-                            export KUBECONFIG=/tmp/kubeconfig-pipeline-${BUILD_NUMBER}
-                            kubectl rollout status deployment/${service} -n ${namespace} --timeout=300s
-                        """
+                        if (!env.FAILED_SERVICES.split(',').contains(service)) {
+                            def namespace = service.replace('-service', '')
+                            try {
+                                sh """
+                                    export KUBECONFIG=/tmp/kubeconfig-pipeline-${BUILD_NUMBER}
+                                    kubectl rollout status deployment/${service} -n ${namespace} --timeout=300s
+                                """
+                            } catch (e) {
+                                echo "Rollout Status failed for ${service}: ${e.message}. Continuing with remaining services."
+                                env.FAILED_SERVICES = (env.FAILED_SERVICES + ',' + service).trim(',')
+                            }
+                        } else {
+                            echo "Skipping Rollout Status for ${service} (already failed earlier stage)"
+                        }
                     }
                 }
             }
@@ -242,15 +322,24 @@ pipeline {
                                  'admin-service': 8082, 'employee-service': 8083, 'customer-service': 8084,
                                  'hr-service': 8085, 'task-service': 8089]
                     env.CHANGED_SERVICES.split(',').each { service ->
-                        def namespace = service.replace('-service', '')
-                        def port = ports[service]
-                        sh """
-                            export KUBECONFIG=/tmp/kubeconfig-pipeline-${BUILD_NUMBER}
-                            sleep 10
-                            kubectl run smoke-test-${service}-${BUILD_NUMBER} --rm -i --restart=Never \\
-                                --image=curlimages/curl \\
-                                -- curl -sf http://${service}.${namespace}.svc.cluster.local:${port}/actuator/health
-                        """
+                        if (!env.FAILED_SERVICES.split(',').contains(service)) {
+                            def namespace = service.replace('-service', '')
+                            def port = ports[service]
+                            try {
+                                sh """
+                                    export KUBECONFIG=/tmp/kubeconfig-pipeline-${BUILD_NUMBER}
+                                    sleep 10
+                                    kubectl run smoke-test-${service}-${BUILD_NUMBER} --rm -i --restart=Never \\
+                                        --image=curlimages/curl \\
+                                        -- curl -sf http://${service}.${namespace}.svc.cluster.local:${port}/actuator/health
+                                """
+                            } catch (e) {
+                                echo "Smoke Test failed for ${service}: ${e.message}."
+                                env.FAILED_SERVICES = (env.FAILED_SERVICES + ',' + service).trim(',')
+                            }
+                        } else {
+                            echo "Skipping Smoke Test for ${service} (already failed earlier stage)"
+                        }
                     }
                 }
             }
@@ -262,7 +351,13 @@ pipeline {
             cleanWs()
         }
         success {
-            echo "Pipeline succeeded for changed services: ${env.CHANGED_SERVICES}"
+            script {
+                if (env.FAILED_SERVICES?.trim()) {
+                    echo "Pipeline completed with some failures: ${env.FAILED_SERVICES}"
+                } else {
+                    echo "Pipeline succeeded for changed services: ${env.CHANGED_SERVICES}"
+                }
+            }
         }
         failure {
             echo "Pipeline failed. Check the stage logs above for the genuine root cause."
