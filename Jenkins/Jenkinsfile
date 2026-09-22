@@ -10,7 +10,6 @@ pipeline {
     environment {
         AWS_REGION     = 'ap-south-1'
         ECR_REGISTRY   = '872792314712.dkr.ecr.ap-south-1.amazonaws.com'
-        NEXUS_REGISTRY = '10.1.11.235:8081'
         EKS_CLUSTER    = 'vasavi-infra-dev-eks'
         IMAGE_TAG      = "${GIT_COMMIT[0..7]}"
     }
@@ -34,6 +33,15 @@ pipeline {
                     aws --version
                     echo "All required tools verified."
                 '''
+                    script {
+                    def nexusIp = sh(
+                        script: "aws ec2 describe-instances --filters 'Name=tag:Name,Values=vasavi-infra-dev-nexus-instance' 'Name=instance-state-name,Values=running' --query 'Reservations[0].Instances[0].PrivateIpAddress' --output text --region ap-south-1",
+                        returnStdout: true
+                    ).trim()
+                    env.NEXUS_REGISTRY = "${nexusIp}:8081"
+                    echo "Resolved NEXUS_REGISTRY: ${env.NEXUS_REGISTRY}"
+                }
+
             }
         }
 
