@@ -122,7 +122,7 @@ pipeline {
                             }
                         } catch (e) {
                             echo "Build failed for ${service}: ${e.message}. Continuing with remaining services."
-                            env.FAILED_SERVICES = (env.FAILED_SERVICES + ',' + service).trim(',')
+                            env.FAILED_SERVICES = (env.FAILED_SERVICES + ',' + service).replaceAll('^,+', '')
                         }
                     }
                 }
@@ -141,7 +141,7 @@ pipeline {
                                 }
                             } catch (e) {
                                 echo "Test failed for ${service}: ${e.message}. Continuing with remaining services."
-                                env.FAILED_SERVICES = (env.FAILED_SERVICES + ',' + service).trim(',')
+                                env.FAILED_SERVICES = (env.FAILED_SERVICES + ',' + service).replaceAll('^,+', '')
                             }
                         } else {
                             echo "Skipping Test for ${service} (already failed earlier stage)"
@@ -165,7 +165,7 @@ pipeline {
                                 }
                             } catch (e) {
                                 echo "SonarQube Analysis failed for ${service}: ${e.message}. Continuing with remaining services."
-                                env.FAILED_SERVICES = (env.FAILED_SERVICES + ',' + service).trim(',')
+                                env.FAILED_SERVICES = (env.FAILED_SERVICES + ',' + service).replaceAll('^,+', '')
                             }
                         } else {
                             echo "Skipping SonarQube Analysis for ${service} (already failed earlier stage)"
@@ -185,7 +185,7 @@ pipeline {
                                 sh "docker build -f ${service}/Dockerfile -t ${ECR_REGISTRY}/vasavi-infra-dev-${service}:${IMAGE_TAG} ."
                             } catch (e) {
                                 echo "Docker Build failed for ${service}: ${e.message}. Continuing with remaining services."
-                                env.FAILED_SERVICES = (env.FAILED_SERVICES + ',' + service).trim(',')
+                                env.FAILED_SERVICES = (env.FAILED_SERVICES + ',' + service).replaceAll('^,+', '')
                             }
                         } else {
                             echo "Skipping Docker Build for ${service} (already failed earlier stage)"
@@ -211,7 +211,7 @@ pipeline {
                                 }
                             } catch (e) {
                                 echo "Trivy Scan failed for ${service}: ${e.message}. Continuing with remaining services."
-                                env.FAILED_SERVICES = (env.FAILED_SERVICES + ',' + service).trim(',')
+                                env.FAILED_SERVICES = (env.FAILED_SERVICES + ',' + service).replaceAll('^,+', '')
                             }
                         } else {
                             echo "Skipping Trivy Scan for ${service} (already failed earlier stage)"
@@ -244,7 +244,7 @@ pipeline {
                                 }
                             } catch (e) {
                                 echo "Push Images failed for ${service}: ${e.message}. Continuing with remaining services."
-                                env.FAILED_SERVICES = (env.FAILED_SERVICES + ',' + service).trim(',')
+                                env.FAILED_SERVICES = (env.FAILED_SERVICES + ',' + service).replaceAll('^,+', '')
                             }
                         } else {
                             echo "Skipping Push Images for ${service} (already failed earlier stage)"
@@ -280,7 +280,7 @@ pipeline {
                                 }
                             } catch (e) {
                                 echo "Helm Deploy failed for ${service}: ${e.message}. Continuing with remaining services."
-                                env.FAILED_SERVICES = (env.FAILED_SERVICES + ',' + service).trim(',')
+                                env.FAILED_SERVICES = (env.FAILED_SERVICES + ',' + service).replaceAll('^,+', '')
                             }
                         } else {
                             echo "Skipping Helm Deploy for ${service} (already failed earlier stage)"
@@ -304,7 +304,7 @@ pipeline {
                                 """
                             } catch (e) {
                                 echo "Rollout Status failed for ${service}: ${e.message}. Continuing with remaining services."
-                                env.FAILED_SERVICES = (env.FAILED_SERVICES + ',' + service).trim(',')
+                                env.FAILED_SERVICES = (env.FAILED_SERVICES + ',' + service).replaceAll('^,+', '')
                             }
                         } else {
                             echo "Skipping Rollout Status for ${service} (already failed earlier stage)"
@@ -335,7 +335,7 @@ pipeline {
                                 """
                             } catch (e) {
                                 echo "Smoke Test failed for ${service}: ${e.message}."
-                                env.FAILED_SERVICES = (env.FAILED_SERVICES + ',' + service).trim(',')
+                                env.FAILED_SERVICES = (env.FAILED_SERVICES + ',' + service).replaceAll('^,+', '')
                             }
                         } else {
                             echo "Skipping Smoke Test for ${service} (already failed earlier stage)"
