@@ -71,7 +71,14 @@ pipeline {
                         returnStdout: true
                     ).trim().split('\n')
 
-                    if (params.INITIAL_BUILD) {
+                    def commonFilesChanged = changedFiles.any {
+                        it == 'pom.xml' || it.startsWith('common-library/')
+                    }
+
+                    if (params.INITIAL_BUILD || commonFilesChanged) {
+                        if (commonFilesChanged && !params.INITIAL_BUILD) {
+                            echo "Shared pom.xml or common-library changed — rebuilding all services."
+                        }
                         env.CHANGED_SERVICES = allServices.join(',')
                     } else {
                         env.CHANGED_SERVICES = allServices.findAll { service ->
@@ -261,10 +268,17 @@ pipeline {
             }
         }
 
-        stage('Helm Deploy') {
+          stage('Helm Deploy') {
             when { expression { env.CHANGED_SERVICES != '' } }
             steps {
                 script {
+                    env.CHANGED_SERVICES.split(',').each { service ->
+                        def ns = service.replace('-service', '')
+                        sh """
+                            export KUBECONFIG=/tmp/kubeconfig-pipeline-${BUILD_NUMBER}
+                            kubectl create namespace ${ns} --dry-run=client -o yaml | kubectl apply -f -
+                        """
+                    }
                     env.CHANGED_SERVICES.split(',').each { service ->
                         if (!env.FAILED_SERVICES.split(',').contains(service)) {
                             def namespace = service.replace('-service', '')
